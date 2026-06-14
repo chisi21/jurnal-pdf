@@ -84,6 +84,107 @@ function Invoke-Gemini([string]$ReqBody, [string[]]$Models, [string]$Key) {
   throw $lastErr
 }
 
+# ── Fungsi pencarian jurnal (sisi server, hindari CORS + rate limit) ──────────
+function Search-Semantic([string]$q, [int]$limit) {
+  $fields = 'title,year,abstract,openAccessPdf,authors,citationCount,externalIds'
+  $url = "https://api.semanticscholar.org/graph/v1/paper/search?query=$([uri]::EscapeDataString($q))&fields=$fields&limit=$limit"
+  for ($i = 1; $i -le 4; $i++) {
+    try {
+      $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 20
+      $d = $r.Content | ConvertFrom-Json
+      $out = @()
+      foreach ($p in $d.data) {
+        $pdf = $null; if ($p.openAccessPdf) { $pdf = $p.openAccessPdf.url }
+        if ($p.externalIds -and $p.externalIds.DOI) { $page = "https://doi.org/$($p.externalIds.DOI)" } else { $page = "https://www.semanticscholar.org/paper/$($p.paperId)" }
+        $auth = (@($p.authors) | Select-Object -First 3 | ForEach-Object { $_.name }) -join ', '
+        $out += @{ source='Semantic Scholar'; title=$p.title; year=$p.year; authors=$auth; abstract=$p.abstract; pdfUrl=$pdf; pageUrl=$page; citations=$p.citationCount }
+      }
+      return $out
+    } catch {
+      $code = 0; try { $code = [int]$_.Exception.Response.StatusCode } catch {}
+      if ($code -eq 429) { Start-Sleep -Milliseconds (1200 * $i); continue }
+      return @()
+    }
+  }
+  return @()
+}
+
+function Search-CORE([string]$q, [int]$limit, [string]$mode) {
+  try {
+    if ($mode -eq 'indonesia') { $query = "$q language:Indonesian" } else { $query = $q }
+    $r = Invoke-WebRequest -Uri "https://api.core.ac.uk/v3/search/works?q=$([uri]::EscapeDataString($query))&limit=$limit" -UseBasicParsing -TimeoutSec 20
+    $d = $r.Content | ConvertFrom-Json
+    $out = @()
+    foreach ($p in $d.results) {
+      $pdf = $p.downloadUrl
+      if (-not $pdf -and $p.links) { $dl = $p.links | Where-Object { $_.type -eq 'download' } | Select-Object -First 1; if ($dl) { $pdf = $dl.url } }
+      if ($p.sourceFulltextUrls -and $p.sourceFulltextUrls.Count -gt 0) { $page = $p.sourceFulltextUrls[0] } else { $page = "https://core.ac.uk/works/$($p.id)" }
+      $auth = (@($p.authors) | Select-Object -First 3 | ForEach-Object { $_.name }) -join ', '
+      $out += @{ source='CORE'; title=$p.title; year=$p.yearPublished; authors=$auth; abstract=$p.abstract; pdfUrl=$pdf; pageUrl=$page; citations=$null }
+    }
+    return $out
+  } catch { return @() }
+}
+
+function Search-Arxiv([string]$q, [int]$limit) {
+  try {
+    $r = Invoke-WebRequest -Uri "https://export.arxiv.org/api/query?search_query=all:$([uri]::EscapeDataString($q))&start=0&max_results=$limit" -UseBasicParsing -TimeoutSec 20
+    [xml]$xml = $r.Content
+    $out = @()
+    foreach ($e in $xml.feed.entry) {
+      if (-not $e) { continue }
+      $id = ($e.id -replace 'https?://arxiv\.org/abs/', '')
+      $yr = '—'; if ($e.published) { try { $yr = ([datetime]$e.published).Year } catch {} }
+      $names = (@($e.author) | Select-Object -First 3 | ForEach-Object { $_.name }) -join ', '
+      $title = ($e.title -replace '\s+', ' ').Trim()
+      $abs = ($e.summary -replace '\s+', ' ').Trim()
+      $out += @{ source='arXiv'; title=$title; year=$yr; authors=$names; abstract=$abs; pdfUrl="https://arxiv.org/pdf/$id"; pageUrl="https://arxiv.org/abs/$id"; citations=$null }
+    }
+    return $out
+  } catch { return @() }
+}
+
+function Invoke-JournalSearch($payload) {
+  $topics   = @($payload.topics) | Select-Object -First 2
+  $category = if ($payload.category) { [string]$payload.category } else { 'mixed' }
+  $sources  = @($payload.sources); if (-not $sources) { $sources = @('semantic','core','arxiv') }
+  $limit    = 20; if ($payload.limit) { $limit = [int]$payload.limit }
+  if ($limit -lt 5) { $limit = 5 }; if ($limit -gt 30) { $limit = 30 }
+  $perTopic = [Math]::Max(6, [Math]::Floor($limit / [Math]::Max(1, $topics.Count)))
+
+  $all = @()
+  foreach ($t in $topics) {
+    $q = [string]$t.query
+    $qId = if ($t.queryId) { [string]$t.queryId } else { $q }
+    if (-not $q -and -not $qId) { continue }
+    if ($category -eq 'indonesia') {
+      if ($sources -contains 'semantic') { $all += Search-Semantic $qId $perTopic; Start-Sleep -Milliseconds 300 }
+      if ($sources -contains 'core')     { $all += Search-CORE $qId $perTopic 'international' }
+    } elseif ($category -eq 'international') {
+      if ($sources -contains 'semantic') { $all += Search-Semantic $q $perTopic; Start-Sleep -Milliseconds 300 }
+      if ($sources -contains 'core')     { $all += Search-CORE $q $perTopic 'international' }
+      if ($sources -contains 'arxiv')    { $all += Search-Arxiv $q $perTopic }
+    } else {
+      if ($sources -contains 'semantic') { $all += Search-Semantic $q $perTopic; Start-Sleep -Milliseconds 300 }
+      if ($sources -contains 'core')     { $all += Search-CORE $q $perTopic 'international'; if ($qId -ne $q) { $all += Search-CORE $qId $perTopic 'international' } }
+      if ($sources -contains 'arxiv')    { $all += Search-Arxiv $q $perTopic }
+    }
+  }
+
+  # Deduplikasi
+  $seen = @{}; $dedup = @()
+  foreach ($r in $all) {
+    $k = ([string]$r.title).ToLower() -replace '\s+', ' '
+    $k = $k.Trim()
+    if (-not $k -or $seen.ContainsKey($k)) { continue }
+    $seen[$k] = $true; $dedup += $r
+  }
+  # Urutkan: PDF dulu, lalu tahun terbaru
+  $sorted = $dedup | Sort-Object @{ Expression = { if ($_.pdfUrl) { 0 } else { 1 } } }, @{ Expression = { [int]($_.year) } ; Descending = $true }
+
+  return @{ results = @($sorted) } | ConvertTo-Json -Depth 10 -Compress
+}
+
 try {
   while ($listener.IsListening) {
     $ctx  = $listener.GetContext()
@@ -143,6 +244,21 @@ try {
             Write-Res $res 500 'application/json; charset=utf-8' (ErrJson $errMsg)
           }
         }
+      }
+    }
+    elseif ($path -eq '/api/search' -and $req.HttpMethod -eq 'POST') {
+      Write-Host "  [SEARCH] Request masuk..." -ForegroundColor Cyan
+      try {
+        $sr   = [System.IO.StreamReader]::new($req.InputStream, [System.Text.Encoding]::UTF8)
+        $body = $sr.ReadToEnd()
+        $sr.Dispose()
+        $pl   = $body | ConvertFrom-Json
+        $out  = Invoke-JournalSearch $pl
+        Write-Res $res 200 'application/json; charset=utf-8' (JsonBytes $out)
+        Write-Host "  [SEARCH] OK" -ForegroundColor Green
+      } catch {
+        Write-Host "  [SEARCH] Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Res $res 500 'application/json; charset=utf-8' (ErrJson $_.Exception.Message)
       }
     }
     else {
