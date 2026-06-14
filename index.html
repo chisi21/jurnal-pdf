@@ -429,25 +429,26 @@ async function understandPrompt(prompt){
     `{\n`+
     `  "understood": "Satu kalimat ringkasan apa yang dicari dalam Bahasa Indonesia",\n`+
     `  "topics": [\n`+
-    `    {"query": "optimized academic English search query", "label": "Nama Topik Singkat"}\n`+
+    `    {"query": "academic English search query", "queryId": "kata kunci pencarian Bahasa Indonesia", "label": "Nama Topik Singkat"}\n`+
     `  ],\n`+
     `  "suggestedCategory": "indonesia|international|mixed"\n`+
     `}\n\n`+
     `Aturan:\n`+
     `- Maksimal 3 topik, tapi 1-2 cukup jika topiknya sempit\n`+
-    `- Field "query" WAJIB dalam Bahasa Inggris dan pakai istilah akademik\n`+
+    `- "query" WAJIB Bahasa Inggris dengan istilah akademik\n`+
+    `- "queryId" WAJIB Bahasa Indonesia (kata kunci akademik yang umum dipakai jurnal Indonesia)\n`+
     `- Jika permintaan menyebut Indonesia/lokal, suggestedCategory = "indonesia"\n`+
     `- Jika topik teknis/sains murni, suggestedCategory = "international"\n`+
     `- Kalau campuran, suggestedCategory = "mixed"`
   );
 
-  if(!text) return { understood:null, topics:[{query:fallbackKeywords(prompt),label:'Pencarian'}], suggestedCategory:categoryMode };
+  if(!text) return { understood:null, topics:[{query:fallbackKeywords(prompt),queryId:fallbackKeywords(prompt),label:'Pencarian'}], suggestedCategory:categoryMode };
 
   try{
     const m=text.match(/\{[\s\S]*\}/);
     if(m){ const parsed=JSON.parse(m[0]); if(parsed.topics?.length) return parsed; }
   }catch{}
-  return { understood:null, topics:[{query:fallbackKeywords(prompt),label:'Pencarian'}], suggestedCategory:categoryMode };
+  return { understood:null, topics:[{query:fallbackKeywords(prompt),queryId:fallbackKeywords(prompt),label:'Pencarian'}], suggestedCategory:categoryMode };
 }
 
 async function analyzeResults(query, results){
@@ -527,18 +528,29 @@ async function doSearch(){
   }catch{ understood=null; }
 
   if(!understood){
-    understood={understood:null,topics:[{query:fallbackKeywords(raw),label:'Pencarian'}],suggestedCategory:categoryMode};
+    understood={understood:null,topics:[{query:fallbackKeywords(raw),queryId:fallbackKeywords(raw),label:'Pencarian'}],suggestedCategory:categoryMode};
   }
 
   showAiUnderstanding(understood);
   setStatus('<span class="spinner"></span> Lagi nyariin jurnal terbaik buat kamu... ✨');
 
-  // Search with all topics in parallel
-  const groups=await Promise.all(buildFetches(understood.topics));
-  allResults=dedup(groups.flat()).sort((a,b)=>{
-    if(!!a.pdfUrl!==!!b.pdfUrl) return a.pdfUrl?-1:1;
-    return (b.year||0)-(a.year||0);
-  });
+  // Cari lewat backend (hindari CORS + rate limit browser)
+  try{
+    const resp=await fetch('/api/search',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        topics:understood.topics,
+        category:categoryMode,
+        sources:[...activeSources],
+        limit:+document.getElementById('limitSel').value
+      })
+    });
+    const data=await resp.json();
+    allResults=data.results||[];
+  }catch(e){
+    console.warn('Search error:',e.message);
+    allResults=[];
+  }
 
   renderPage();
   btn.disabled=false; btn.innerHTML='Cariin~ 🔍';
