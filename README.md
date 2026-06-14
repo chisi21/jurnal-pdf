@@ -29,9 +29,23 @@ Butuh **Windows** (pakai PowerShell bawaan, tanpa instalasi apa pun).
 
 > Tanpa API key pun tetap bisa dipakai — hanya saja pemahaman prompt jadi lebih sederhana (ekstraksi kata kunci biasa).
 
+## ☁️ Deploy ke Vercel (online)
+
+Versi ini juga siap dideploy ke [Vercel](https://vercel.com) — server PowerShell tidak dipakai online, melainkan serverless function di folder `api/`.
+
+1. Login Vercel pakai akun GitHub
+2. **Add New → Project →** pilih repo ini → **Import**
+3. Sebelum/sesudah deploy, buka **Settings → Environment Variables**, tambahkan:
+   - Name: `GEMINI_KEY`
+   - Value: API key Gemini kamu
+4. **Deploy** — selesai! Web bisa diakses dari mana saja.
+
+> Key **tidak pernah** masuk ke repo. Hanya tersimpan terenkripsi di Environment Variable Vercel.
+
 ## 🔒 Keamanan
 
-API key disimpan **hanya** di `config.json` lokal kamu. File itu sudah masuk `.gitignore` agar **tidak pernah ter-upload** ke repository.
+- **Lokal:** API key disimpan di `config.json` (sudah di-`.gitignore`, tidak ikut ter-upload).
+- **Vercel:** API key disimpan sebagai Environment Variable, bukan di kode.
 
 ## 🧩 Teknologi
 
