@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARA's Jurnal Finder 💜</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#f3f1fd; --bg2:#ece8fb;
+      --card:#ffffff; --soft:#f6f4ff; --soft2:#efeafd;
+      --purple:#8b7cf0; --purple-dark:#7c6df2; --purple-deep:#5b4bd6;
+      --lav:#c8bdf7; --orange:#ff9f43; --orange-soft:#ffd9a8;
+      --yellow:#f7c948; --pink:#ff8fb3; --green:#4cc38a;
+      --ink:#3a2f6b; --text:#4a4368; --muted:#9a93b8; --line:#e7e1fb;
+      --radius:24px; --radius-sm:16px;
+      --shadow:0 10px 30px -10px rgba(124,109,242,0.30);
+      --shadow-sm:0 6px 16px -6px rgba(124,109,242,0.25);
+    }
+    body {
+      background:
+        radial-gradient(1200px 600px at 110% -10%, #ffe6cf 0%, transparent 45%),
+        radial-gradient(1000px 500px at -10% 0%, #e3d9ff 0%, transparent 40%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+      background-attachment:fixed;
+      color:var(--text); font-family:'Quicksand',system-ui,sans-serif;
+      min-height:100vh; padding:1.5rem 1rem 3rem; overflow-x:hidden;
+    }
+    .container { max-width:880px; margin:0 auto; position:relative; z-index:2; }
+
+    /* ── Floating background decorations ── */
+    .deco { position:fixed; z-index:0; user-select:none; pointer-events:none; opacity:0.65; filter:drop-shadow(0 6px 10px rgba(124,109,242,0.15)); }
+    .d1 { top:8%;  left:4%;  font-size:2.2rem; animation:float 7s ease-in-out infinite; }
+    .d2 { top:18%; right:5%; font-size:1.8rem; animation:float 6s ease-in-out infinite 1s; }
+    .d3 { top:55%; left:3%;  font-size:1.7rem; animation:float 8s ease-in-out infinite 0.5s; }
+    .d4 { top:70%; right:4%; font-size:2rem;   animation:float 7.5s ease-in-out infinite 1.5s; }
+    .d5 { top:40%; right:8%; font-size:1.4rem; animation:float 9s ease-in-out infinite; }
+    @keyframes float { 0%,100%{ transform:translateY(0) rotate(-4deg);} 50%{ transform:translateY(-18px) rotate(4deg);} }
+
+    /* ── Hero / personal banner ── */
+    .hero {
+      position:relative; background:linear-gradient(135deg,#8b7cf0 0%,#a78bf5 55%,#ff9f43 160%);
+      border-radius:28px; padding:1.6rem 1.6rem 1.7rem; color:#fff; overflow:hidden;
+      box-shadow:0 18px 40px -14px rgba(124,109,242,0.55); margin-bottom:1.2rem;
+    }
+    .hero::after {
+      content:""; position:absolute; right:-30px; top:-30px; width:160px; height:160px;
+      background:radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius:50%;
+    }
+    .hero-top { display:flex; align-items:center; justify-content:space-between; gap:0.8rem; margin-bottom:0.6rem; }
+    .hero-badge {
+      display:inline-flex; align-items:center; gap:0.35rem; background:rgba(255,255,255,0.22);
+      border:1px solid rgba(255,255,255,0.35); border-radius:999px; padding:0.28rem 0.8rem;
+      font-size:0.74rem; font-weight:600; backdrop-filter:blur(4px);
+    }
+    .hero h1 {
+      font-family:'Baloo 2',cursive; font-size:2.05rem; font-weight:800; line-height:1.1;
+      letter-spacing:0.3px; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;
+    }
+    .hero h1 .name {
+      background:linear-gradient(180deg,#fff,#ffe9cf); -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent; background-clip:text;
+      position:relative;
+    }
+    .wave { display:inline-block; animation:wave 2.4s ease-in-out infinite; transform-origin:70% 70%; }
+    @keyframes wave { 0%,60%,100%{transform:rotate(0);} 10%{transform:rotate(16deg);} 20%{transform:rotate(-8deg);} 30%{transform:rotate(16deg);} 40%{transform:rotate(-4deg);} 50%{transform:rotate(10deg);} }
+    .hero p { font-size:0.92rem; opacity:0.95; margin-top:0.45rem; font-weight:500; max-width:90%; }
+    .heart-pop { display:inline-block; animation:beat 1.3s ease-in-out infinite; }
+    @keyframes beat { 0%,100%{transform:scale(1);} 25%{transform:scale(1.25);} 40%{transform:scale(0.95);} }
+
+    .ai-toggle {
+      display:flex; align-items:center; gap:0.4rem; flex-shrink:0; user-select:none;
+      background:rgba(255,255,255,0.9); border:none; border-radius:999px;
+      color:var(--purple-deep); font-size:0.78rem; font-weight:700; padding:0.42rem 0.85rem;
+      box-shadow:0 6px 14px -6px rgba(0,0,0,0.25);
+    }
+    .ai-dot { width:8px; height:8px; border-radius:50%; background:#cfc7ee; flex-shrink:0; }
+    .ai-dot.on { background:var(--green); box-shadow:0 0 0 4px rgba(76,195,138,0.25); animation:pulse 1.6s infinite; }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(76,195,138,0.25);} 50%{box-shadow:0 0 0 6px rgba(76,195,138,0.10);} }
+
+    /* ── Category tabs ── */
+    .cat-tabs { display:flex; gap:0.5rem; margin-bottom:1rem; }
+    .cat-tab {
+      flex:1; background:var(--card); border:2px solid transparent; border-radius:var(--radius-sm);
+      color:var(--muted); cursor:pointer; font-family:inherit; font-size:0.86rem; font-weight:700;
+      padding:0.7rem 0.4rem; transition:all 0.2s; box-shadow:var(--shadow-sm);
+    }
+    .cat-tab.active { background:linear-gradient(135deg,#8b7cf0,#a78bf5); color:#fff; transform:translateY(-2px) scale(1.02); box-shadow:0 12px 22px -10px rgba(124,109,242,0.6); }
+    .cat-tab:hover:not(.active) { color:var(--purple-dark); transform:translateY(-1px); }
+
+    /* ── Prompt input ── */
+    .prompt-wrap {
+      background:var(--card); border:2.5px solid var(--line); border-radius:var(--radius);
+      margin-bottom:1.1rem; transition:all 0.25s; overflow:hidden; box-shadow:var(--shadow);
+    }
+    .prompt-wrap:focus-within { border-color:var(--purple); box-shadow:0 14px 34px -12px rgba(124,109,242,0.5); }
+    .prompt-label { display:flex; align-items:center; gap:0.4rem; padding:0.85rem 1.2rem 0; font-size:0.82rem; font-weight:700; color:var(--purple-deep); }
+    .prompt-wrap textarea {
+      background:transparent; border:none; color:var(--ink); font-family:inherit;
+      font-size:1rem; font-weight:500; line-height:1.65; min-height:78px; max-height:220px;
+      outline:none; overflow-y:auto; padding:0.5rem 1.2rem 0.4rem; resize:none; width:100%;
+    }
+    .prompt-wrap textarea::placeholder { color:var(--muted); font-weight:500; line-height:1.6; }
+    .prompt-hint { padding:0 1.2rem 0.4rem; font-size:0.74rem; color:var(--muted); font-weight:600; }
+    .prompt-toolbar {
+      align-items:center; border-top:2px dashed var(--line); display:flex;
+      flex-wrap:wrap; gap:0.45rem; justify-content:space-between; padding:0.6rem 0.85rem;
+    }
+    .toolbar-left { display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; }
+    .toolbar-left .lbl { color:var(--muted); font-size:0.74rem; font-weight:700; }
+    .tag {
+      background:var(--soft); border:2px solid transparent; border-radius:999px; color:var(--muted);
+      cursor:pointer; font-family:inherit; font-size:0.74rem; font-weight:700; padding:0.26rem 0.72rem; transition:all 0.2s; user-select:none;
+    }
+    .tag.active { background:#efeafd; border-color:var(--lav); color:var(--purple-deep); }
+    .tag:hover:not(.active) { color:var(--purple-dark); }
+    .toolbar-sep { width:2px; height:18px; background:var(--line); border-radius:2px; flex-shrink:0; }
+    .toolbar-select {
+      background:var(--soft); border:2px solid var(--line); border-radius:999px; color:var(--text);
+      font-family:inherit; font-size:0.74rem; font-weight:700; padding:0.28rem 0.6rem; outline:none; cursor:pointer;
+    }
+    .toolbar-select:focus { border-color:var(--purple); }
+    .send-btn {
+      background:linear-gradient(135deg,#ff9f43,#ff7eb3); border:none; border-radius:999px; color:#fff;
+      cursor:pointer; font-family:'Baloo 2',cursive; font-size:0.95rem; font-weight:700; padding:0.55rem 1.4rem;
+      transition:transform 0.12s, box-shadow 0.2s; white-space:nowrap; display:flex; align-items:center; gap:0.4rem;
+      box-shadow:0 10px 20px -8px rgba(255,126,179,0.65);
+    }
+    .send-btn:hover { transform:translateY(-2px) scale(1.04); box-shadow:0 14px 26px -8px rgba(255,126,179,0.75); }
+    .send-btn:active { transform:scale(0.96); }
+    .send-btn:disabled { opacity:0.6; cursor:wait; transform:none; }
+
+    /* ── No key hint ── */
+    .no-key-hint {
+      background:#fff6e9; border:2px dashed var(--orange-soft); border-radius:var(--radius-sm);
+      color:#b9762a; font-size:0.8rem; font-weight:600; margin-bottom:1.1rem; padding:0.6rem 1rem;
+      display:flex; align-items:center; gap:0.5rem;
+    }
+    .no-key-hint code { background:#ffeccd; padding:1px 6px; border-radius:6px; font-family:inherit; font-weight:700; }
+
+    /* ── AI Panel ── */
+    #aiPanel { margin-bottom:1.1rem; }
+    .ai-panel { background:linear-gradient(180deg,#fbfaff,#f4f0ff); border:2px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm); }
+    .ai-panel-head { background:linear-gradient(135deg,#8b7cf0,#a78bf5); display:flex; align-items:center; gap:0.5rem; padding:0.6rem 1.1rem; font-size:0.84rem; font-weight:700; color:#fff; }
+    .ai-panel-head .ai-model { margin-left:auto; font-size:0.72rem; opacity:0.92; font-weight:600; }
+    .ai-panel-body { padding:0.9rem 1.1rem; }
+    .ai-understood { background:#fff; border-radius:14px; padding:0.6rem 0.9rem; margin-bottom:0.6rem; font-size:0.88rem; font-weight:600; color:var(--ink); line-height:1.5; border-left:4px solid var(--orange); box-shadow:var(--shadow-sm); }
+    .ai-topics-lbl { color:var(--muted); font-size:0.76rem; font-weight:700; margin-bottom:0.35rem; }
+    .ai-chips { display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.4rem; }
+    .ai-chip { background:#fff; border:2px solid var(--lav); border-radius:999px; color:var(--purple-deep); font-size:0.76rem; font-weight:700; padding:0.24rem 0.7rem; cursor:default; }
+    .ai-sep { border:none; border-top:2px dashed var(--line); margin:0.7rem 0; }
+    .ai-analysis-lbl { color:var(--purple-deep); font-size:0.78rem; font-weight:700; margin-bottom:0.35rem; }
+    .ai-analysis-text { color:var(--text); font-size:0.85rem; font-weight:500; line-height:1.65; }
+    .ai-no-key { color:var(--muted); font-size:0.79rem; font-weight:600; margin-top:0.4rem; }
+
+    /* ── Status ── */
+    #status { text-align:center; color:var(--muted); font-size:0.88rem; font-weight:600; margin-bottom:1rem; min-height:1.2rem; }
+    #status strong { color:var(--purple-deep); }
+    .spinner { display:inline-block; width:15px; height:15px; border:3px solid var(--line); border-top-color:var(--purple); border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; margin-right:5px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── Cards ── */
+    #results { display:flex; flex-direction:column; gap:0.95rem; }
+    .card {
+      background:var(--card); border:2px solid transparent; border-radius:var(--radius); padding:1.1rem 1.3rem;
+      transition:all 0.2s; box-shadow:var(--shadow-sm); animation:pop 0.4s ease backwards;
+    }
+    .card:nth-child(2){animation-delay:0.05s} .card:nth-child(3){animation-delay:0.1s} .card:nth-child(4){animation-delay:0.15s} .card:nth-child(5){animation-delay:0.2s}
+    @keyframes pop { from{ opacity:0; transform:translateY(14px) scale(0.98);} to{ opacity:1; transform:none;} }
+    .card:hover { border-color:var(--lav); transform:translateY(-3px); box-shadow:0 16px 30px -12px rgba(124,109,242,0.4); }
+    .card-header { display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem; margin-bottom:0.45rem; }
+    .card-title { font-size:0.98rem; font-weight:700; color:var(--ink); line-height:1.4; flex:1; }
+    .card-title a { color:inherit; text-decoration:none; }
+    .card-title a:hover { color:var(--purple-dark); }
+    .badge-year { background:#fff3df; color:#d98818; border-radius:999px; font-size:0.74rem; font-weight:700; padding:0.2rem 0.6rem; white-space:nowrap; }
+    .card-meta { color:var(--muted); font-size:0.79rem; font-weight:600; margin-bottom:0.55rem; }
+    .card-abstract { color:var(--text); font-size:0.84rem; font-weight:500; line-height:1.6; margin-bottom:0.8rem; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+    .card-footer { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; }
+    .btn-pdf {
+      align-items:center; background:linear-gradient(135deg,#4cc38a,#37b87c); border:none; border-radius:999px; color:#fff;
+      cursor:pointer; display:inline-flex; font-family:inherit; font-size:0.82rem; font-weight:700; gap:0.35rem; padding:0.42rem 0.95rem;
+      text-decoration:none; transition:transform 0.12s, box-shadow 0.2s; box-shadow:0 8px 16px -8px rgba(76,195,138,0.7);
+    }
+    .btn-pdf:hover { transform:translateY(-2px) scale(1.04); }
+    .btn-sec { align-items:center; background:var(--soft); border:2px solid var(--line); border-radius:999px; color:var(--muted); cursor:pointer; display:inline-flex; font-family:inherit; font-size:0.79rem; font-weight:700; gap:0.3rem; padding:0.4rem 0.8rem; text-decoration:none; transition:all 0.2s; }
+    .btn-sec:hover { border-color:var(--lav); color:var(--purple-dark); }
+    .no-pdf { color:var(--muted); font-size:0.78rem; font-weight:600; font-style:italic; }
+    .cite { color:var(--muted); font-size:0.76rem; font-weight:700; margin-left:auto; }
+
+    /* ── Empty state ── */
+    .empty { text-align:center; padding:3rem 1rem; color:var(--muted); }
+    .empty .icon { font-size:3.2rem; margin-bottom:0.7rem; display:inline-block; animation:float 4s ease-in-out infinite; }
+    .empty p { font-weight:600; line-height:1.6; }
+    .empty strong { color:var(--purple-deep); }
+
+    /* ── Welcome card (first load) ── */
+    .welcome { text-align:center; padding:2.6rem 1.4rem; }
+    .welcome .big { font-size:3.4rem; display:inline-block; animation:float 4s ease-in-out infinite; }
+    .welcome h3 { font-family:'Baloo 2',cursive; color:var(--purple-deep); font-size:1.3rem; margin:0.6rem 0 0.3rem; }
+    .welcome p { color:var(--muted); font-weight:600; font-size:0.9rem; line-height:1.65; max-width:440px; margin:0 auto; }
+    .welcome .examples { display:flex; flex-direction:column; gap:0.5rem; margin-top:1.2rem; max-width:480px; margin-left:auto; margin-right:auto; }
+    .ex-chip {
+      background:var(--card); border:2px solid var(--line); border-radius:16px; padding:0.6rem 0.9rem; cursor:pointer;
+      font-size:0.85rem; font-weight:600; color:var(--text); text-align:left; transition:all 0.2s; box-shadow:var(--shadow-sm);
+    }
+    .ex-chip:hover { border-color:var(--lav); transform:translateY(-2px); color:var(--purple-deep); }
+
+    /* ── Pagination ── */
+    .pagination { display:flex; justify-content:center; gap:0.5rem; margin-top:1.8rem; }
+    .pagination button { background:var(--card); border:2px solid var(--line); border-radius:999px; color:var(--text); cursor:pointer; font-family:inherit; font-size:0.84rem; font-weight:700; padding:0.45rem 1.1rem; transition:all 0.2s; box-shadow:var(--shadow-sm); }
+    .pagination button:hover:not(:disabled) { border-color:var(--purple); color:var(--purple-deep); transform:translateY(-1px); }
+    .pagination button:disabled { opacity:0.4; cursor:not-allowed; }
+    .page-info { align-items:center; color:var(--muted); display:flex; font-size:0.83rem; font-weight:700; padding:0 0.5rem; }
+
+    /* ── Footer ── */
+    footer { margin-top:2.6rem; text-align:center; color:var(--muted); font-size:0.78rem; font-weight:600; line-height:1.9; }
+    footer a { color:var(--purple-dark); text-decoration:none; font-weight:700; }
+    footer .made { margin-top:0.3rem; font-size:0.82rem; color:var(--purple-deep); font-weight:700; }
+
+    @media(max-width:600px) {
+      .hero h1 { font-size:1.6rem; }
+      .deco { display:none; }
+      .cat-tab { font-size:0.78rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating cute decorations -->
+  <div class="deco d1">📚</div>
+  <div class="deco d2">✨</div>
+  <div class="deco d3">🌸</div>
+  <div class="deco d4">💜</div>
+  <div class="deco d5">⭐</div>
+
+<div class="container">
+
+  <!-- Personal hero banner -->
+  <div class="hero">
+    <div class="hero-top">
+      <span class="hero-badge">🎀 Spesial buat kamu</span>
+      <div class="ai-toggle" id="aiToggle" title="Status Gemini AI (config.json)">
+        <span class="ai-dot" id="aiDot"></span>
+        <span id="aiLabel">Gemini AI</span>
+      </div>
+    </div>
+    <h1>Halo, <span class="name">ARA</span> <span class="wave">👋</span></h1>
+    <p>Ini tools cari jurnal khusus buat kamu biar skripsinya makin lancar & gak pusing. Tinggal cerita aja, nanti dicariin~ <span class="heart-pop">💜</span></p>
+  </div>
+
+  <!-- Category tabs -->
+  <div class="cat-tabs">
+    <button class="cat-tab active" data-cat="mixed"         onclick="setCat(this)">⚡ Campuran</button>
+    <button class="cat-tab"        data-cat="indonesia"     onclick="setCat(this)">🇮🇩 Indonesia</button>
+    <button class="cat-tab"        data-cat="international" onclick="setCat(this)">🌍 International</button>
+  </div>
+
+  <!-- Prompt input -->
+  <div class="prompt-wrap" id="promptWrap">
+    <div class="prompt-label">💭 Cerita dong, ARA mau cari apa?</div>
+    <textarea
+      id="query"
+      placeholder="Tulis santai aja kayak ngobrol, contoh:
+
+🌷 aku lagi skripsi soal pengaruh media sosial ke kesehatan mental remaja, butuh yang ada PDF-nya
+🌷 cariin jurnal tentang machine learning buat deteksi penyakit dong
+🌷 butuh referensi blockchain buat UMKM di Indonesia"
+    ></textarea>
+    <div class="prompt-hint" id="promptHint" style="display:none">⏎ Enter buat cari &nbsp;•&nbsp; Shift+Enter buat baris baru</div>
+    <div class="prompt-toolbar">
+      <div class="toolbar-left">
+        <span class="lbl">Sumber:</span>
+        <span class="tag active" data-source="semantic" onclick="toggleSrc(this)">Semantic Scholar</span>
+        <span class="tag active" data-source="core"     onclick="toggleSrc(this)">CORE</span>
+        <span class="tag active" data-source="arxiv"    onclick="toggleSrc(this)">arXiv</span>
+        <div class="toolbar-sep"></div>
+        <select class="toolbar-select" id="limitSel">
+          <option value="10">10 hasil</option>
+          <option value="20" selected>20 hasil</option>
+          <option value="30">30 hasil</option>
+        </select>
+        <select class="toolbar-select" id="pdfOnly">
+          <option value="0">Semua</option>
+          <option value="1">PDF aja ✨</option>
+        </select>
+      </div>
+      <button class="send-btn" id="sendBtn" onclick="doSearch()">Cariin~ 🔍</button>
+    </div>
+  </div>
+
+  <!-- No API key hint -->
+  <div class="no-key-hint" id="noKeyHint" style="display:none">
+    💡 Gemini AI lagi nonaktif — isi <code>geminiKey</code> di <code>config.json</code> lalu restart server ya~
+  </div>
+
+  <!-- AI Panel -->
+  <div id="aiPanel" style="display:none">
+    <div class="ai-panel">
+      <div class="ai-panel-head">
+        <span>🤖</span>
+        <span>Gemini lagi mikir buat ARA</span>
+        <span id="aiSpinner" style="display:none"><span class="spinner" style="border-top-color:#fff"></span></span>
+        <span class="ai-model">Gemini 2.5 Flash</span>
+      </div>
+      <div class="ai-panel-body">
+        <div id="aiEnhContent"></div>
+        <div id="aiAnalysisContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="status"></div>
+  <div id="results">
+    <div class="welcome">
+      <span class="big">🐥</span>
+      <h3>Semangat skripsinya, ARA! ✨</h3>
+      <p>Ketik aja apa yang lagi kamu cari di atas. Gak perlu kata kunci ribet — cerita biasa juga ngerti kok 💜</p>
+      <div class="examples">
+        <div class="ex-chip" onclick="useExample(this)">🌷 pengaruh media sosial terhadap kesehatan mental remaja</div>
+        <div class="ex-chip" onclick="useExample(this)">🌷 sistem informasi akademik berbasis web</div>
+        <div class="ex-chip" onclick="useExample(this)">🌷 strategi pemasaran digital untuk UMKM</div>
+      </div>
+    </div>
+  </div>
+  <div class="pagination" id="pagination" style="display:none">
+    <button id="prevBtn" onclick="goPage(-1)" disabled>← Sebelumnya</button>
+    <span class="page-info" id="pageInfo"></span>
+    <button id="nextBtn" onclick="goPage(1)">Selanjutnya →</button>
+  </div>
+
+  <footer>
+    Data: <a href="https://www.semanticscholar.org" target="_blank">Semantic Scholar</a> •
+    <a href="https://core.ac.uk" target="_blank">CORE</a> •
+    <a href="https://arxiv.org" target="_blank">arXiv</a> • AI: <a href="#">Gemini</a>
+    <div class="made">Dibuat dengan 💜 khusus untuk ARA</div>
+  </footer>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let allResults=[], currentPage=1, activeQuery='';
+let categoryMode='mixed';
+let activeSources=new Set(['semantic','core','arxiv']);
+let aiReady=false;
+let searching=false;
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+const textarea=document.getElementById('query');
+textarea.addEventListener('input',()=>{ autoResize(textarea); });
+textarea.addEventListener('focus',()=>{ document.getElementById('promptHint').style.display=''; });
+textarea.addEventListener('blur', ()=>{ document.getElementById('promptHint').style.display='none'; });
+textarea.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doSearch(); }
+});
+document.getElementById('pdfOnly').addEventListener('change',()=>{ if(allResults.length){currentPage=1;renderPage();} });
+
+// Cek status AI dari server saat halaman load
+(async function checkStatus(){
+  try{
+    const r=await fetch('/api/status');
+    const d=await r.json();
+    aiReady=!!d.aiReady;
+  }catch{ aiReady=false; }
+  const dot=document.getElementById('aiDot');
+  const btn=document.getElementById('aiToggle');
+  const lbl=document.getElementById('aiLabel');
+  const hint=document.getElementById('noKeyHint');
+  if(aiReady){
+    dot.className='ai-dot on'; btn.classList.add('on');
+    lbl.textContent='Gemini AI ✓'; hint.style.display='none';
+  } else {
+    dot.className='ai-dot'; btn.classList.remove('on');
+    lbl.textContent='Gemini AI'; hint.style.display='';
+  }
+})();
+
+function autoResize(el){
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,220)+'px';
+}
+
+function useExample(el){
+  textarea.value=el.textContent.replace(/^🌷\s*/,'').trim();
+  autoResize(textarea); textarea.focus(); doSearch();
+}
+
+// ── Category ─────────────────────────────────────────────────────────────────
+function setCat(el){
+  document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active'); categoryMode=el.dataset.cat;
+}
+function toggleSrc(el){
+  const s=el.dataset.source;
+  if(activeSources.has(s)){ if(activeSources.size===1)return; activeSources.delete(s); el.classList.remove('active'); }
+  else { activeSources.add(s); el.classList.add('active'); }
+}
+
+// ── AI API (key ada di server, browser tidak perlu tahu) ─────────────────────
+async function callAI(content){
+  if(!aiReady) return null;
+  try{
+    const r=await fetch('/api/ai',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:[{role:'user',content}]})
+    });
+    const d=await r.json();
+    if(d.error) throw new Error(typeof d.error==='string'?d.error:JSON.stringify(d.error));
+    return d.content?.[0]?.text||null;
+  }catch(e){ console.warn('AI:',e.message); return null; }
+}
+
+// Core function: understand the user's natural language prompt
+async function understandPrompt(prompt){
+  if(!aiReady) return { understood:null, topics:[{query:fallbackKeywords(prompt),label:'Pencarian'}], suggestedCategory:categoryMode };
+
+  const catCtx={
+    indonesia:'Konteks Indonesia / Bahasa Indonesia',
+    international:'Jurnal internasional berbahasa Inggris',
+    mixed:'Cakupan luas Indonesia dan internasional'
+  }[categoryMode];
+
+  const text=await callAI(
+    `Kamu asisten pencari jurnal akademik ilmiah. Pengguna mengirim permintaan ini:\n"${prompt}"\n\n`+
+    `Kategori saat ini: ${catCtx}.\n\n`+
+    `Pahami intent pencarian dan balas HANYA JSON valid tanpa teks lain:\n`+
+    `{\n`+
+    `  "understood": "Satu kalimat ringkasan apa yang dicari dalam Bahasa Indonesia",\n`+
+    `  "topics": [\n`+
+    `    {"query": "optimized academic English search query", "label": "Nama Topik Singkat"}\n`+
+    `  ],\n`+
+    `  "suggestedCategory": "indonesia|international|mixed"\n`+
+    `}\n\n`+
+    `Aturan:\n`+
+    `- Maksimal 3 topik, tapi 1-2 cukup jika topiknya sempit\n`+
+    `- Field "query" WAJIB dalam Bahasa Inggris dan pakai istilah akademik\n`+
+    `- Jika permintaan menyebut Indonesia/lokal, suggestedCategory = "indonesia"\n`+
+    `- Jika topik teknis/sains murni, suggestedCategory = "international"\n`+
+    `- Kalau campuran, suggestedCategory = "mixed"`
+  );
+
+  if(!text) return { understood:null, topics:[{query:fallbackKeywords(prompt),label:'Pencarian'}], suggestedCategory:categoryMode };
+
+  try{
+    const m=text.match(/\{[\s\S]*\}/);
+    if(m){ const parsed=JSON.parse(m[0]); if(parsed.topics?.length) return parsed; }
+  }catch{}
+  return { understood:null, topics:[{query:fallbackKeywords(prompt),label:'Pencarian'}], suggestedCategory:categoryMode };
+}
+
+async function analyzeResults(query, results){
+  if(!results.length) return null;
+  const top=results.slice(0,6).map((r,i)=>`${i+1}. "${r.title}" (${r.year}) — ${(r.abstract||'').slice(0,160)}`).join('\n');
+  return callAI(
+    `Buat analisis singkat 3-4 kalimat Bahasa Indonesia tentang hasil pencarian jurnal terkait "${query}".\n`+
+    `Sebutkan tren penelitian yang muncul, gap yang perlu diteliti, dan seberapa relevan untuk skripsi.\n`+
+    `Sapa pembacanya dengan nama "ARA" dengan ramah. Tulis langsung tanpa header atau label apapun.\n\nHasil teratas:\n${top}`
+  );
+}
+
+// Fallback keyword extraction (no API key)
+function fallbackKeywords(prompt){
+  const stop=new Set(['aku','saya','kamu','kita','kami','yang','dan','atau','tapi','tetapi','karena','dengan','untuk','buat','dari','ke','di','pada','oleh','tentang','terkait','mengenai','adalah','akan','sudah','sedang','lagi','perlu','butuh','minta','cari','tolong','ya','dong','bantu','skripsi','tesis','tugas','akhir','jurnal','paper','artikel','referensi','penelitian','studi','mau','ingin','mohon','bisa','gimana','bagaimana','apa','siapa','kapan','dimana','coba','nyari','cuma','hanya','juga','sih','nih','loh','deh','kan','aja','saja','ini','itu','ada','tidak','bukan','jangan','sama']);
+  return prompt.toLowerCase().replace(/[^\w\s]/g,' ').split(/\s+/)
+    .filter(w=>w.length>2&&!stop.has(w)).slice(0,8).join(' ');
+}
+
+// ── AI Panel display ──────────────────────────────────────────────────────────
+function setStatus(html){ document.getElementById('status').innerHTML=html; }
+
+function showAiLoading(){
+  document.getElementById('aiPanel').style.display='';
+  document.getElementById('aiSpinner').style.display='';
+  document.getElementById('aiEnhContent').innerHTML=
+    `<div style="color:var(--muted);font-size:0.85rem;font-weight:600"><span class="spinner"></span> Lagi mahamin maksud kamu, ARA... 💭</div>`;
+  document.getElementById('aiAnalysisContent').innerHTML='';
+}
+
+function showAiUnderstanding(data){
+  document.getElementById('aiSpinner').style.display='none';
+  let h='';
+  if(data.understood){
+    h+=`<div class="ai-understood">💡 ${esc(data.understood)}</div>`;
+  }
+  if(data.topics?.length){
+    h+=`<div class="ai-topics-lbl">🔎 Topik yang dicariin:</div>`;
+    h+=`<div class="ai-chips">${data.topics.map(t=>`<span class="ai-chip" title="${escAttr(t.query)}">📄 ${esc(t.label)}</span>`).join('')}</div>`;
+  }
+  if(!aiReady){
+    h+=`<div class="ai-no-key">💡 Isi geminiKey di config.json biar Gemini makin ngerti maksud kamu</div>`;
+  }
+  document.getElementById('aiEnhContent').innerHTML=h||'';
+}
+
+function showAiAnalysis(text){
+  document.getElementById('aiAnalysisContent').innerHTML=
+    `<hr class="ai-sep"><div class="ai-analysis-lbl">📊 Catatan dari Gemini buat ARA:</div><div class="ai-analysis-text">${esc(text)}</div>`;
+}
+
+// ── Main search flow ──────────────────────────────────────────────────────────
+async function doSearch(){
+  const raw=textarea.value.trim();
+  if(!raw||searching) return;
+  searching=true;
+
+  const btn=document.getElementById('sendBtn');
+  btn.disabled=true; btn.textContent='Mencari... 🐥';
+  activeQuery=raw; currentPage=1; allResults=[];
+  document.getElementById('results').innerHTML='';
+  document.getElementById('pagination').style.display='none';
+
+  // Show AI panel loading state
+  if(aiReady){ showAiLoading(); }
+  else { document.getElementById('aiPanel').style.display='none'; showAiUnderstanding({understood:null,topics:[]}); }
+
+  setStatus('<span class="spinner"></span> Lagi nyiapin pencarian...');
+
+  // Understand the prompt (AI with 7s timeout, or fallback)
+  let understood;
+  try{
+    understood=await Promise.race([
+      understandPrompt(raw),
+      new Promise(r=>setTimeout(()=>r(null),7000))
+    ]);
+  }catch{ understood=null; }
+
+  if(!understood){
+    understood={understood:null,topics:[{query:fallbackKeywords(raw),label:'Pencarian'}],suggestedCategory:categoryMode};
+  }
+
+  showAiUnderstanding(understood);
+  setStatus('<span class="spinner"></span> Lagi nyariin jurnal terbaik buat kamu... ✨');
+
+  // Search with all topics in parallel
+  const groups=await Promise.all(buildFetches(understood.topics));
+  allResults=dedup(groups.flat()).sort((a,b)=>{
+    if(!!a.pdfUrl!==!!b.pdfUrl) return a.pdfUrl?-1:1;
+    return (b.year||0)-(a.year||0);
+  });
+
+  renderPage();
+  btn.disabled=false; btn.innerHTML='Cariin~ 🔍';
+  searching=false;
+
+  // Async result analysis
+  if(aiReady&&allResults.length){
+    document.getElementById('aiAnalysisContent').innerHTML=
+      `<hr class="ai-sep"><div class="ai-analysis-lbl"><span class="spinner"></span> Lagi nganalisis hasilnya...</div>`;
+    analyzeResults(raw,allResults).then(t=>{
+      if(t) showAiAnalysis(t);
+      else document.getElementById('aiAnalysisContent').innerHTML='';
+    });
+  }
+}
+
+// ── Fetch builders ────────────────────────────────────────────────────────────
+function buildFetches(topics){
+  const lim=+document.getElementById('limitSel').value;
+  const perTopic=Math.max(6,Math.floor(lim/Math.max(1,topics.length)));
+  const ps=[];
+  topics.forEach(({query:q})=>{
+    const qId=q+' Indonesia';
+    if(categoryMode==='indonesia'){
+      if(activeSources.has('semantic')) ps.push(fetchSemantic(qId,perTopic));
+      if(activeSources.has('core'))     ps.push(fetchCORE(q,perTopic,'indonesia'));
+    } else if(categoryMode==='international'){
+      if(activeSources.has('semantic')) ps.push(fetchSemantic(q,perTopic));
+      if(activeSources.has('core'))     ps.push(fetchCORE(q,perTopic,'international'));
+      if(activeSources.has('arxiv'))    ps.push(fetchArxiv(q,perTopic));
+    } else {
+      if(activeSources.has('semantic')){ ps.push(fetchSemantic(q,perTopic)); ps.push(fetchSemantic(qId,Math.ceil(perTopic/2))); }
+      if(activeSources.has('core'))    { ps.push(fetchCORE(q,perTopic,'international')); ps.push(fetchCORE(q,Math.ceil(perTopic/2),'indonesia')); }
+      if(activeSources.has('arxiv'))     ps.push(fetchArxiv(q,perTopic));
+    }
+  });
+  return ps;
+}
+
+function dedup(arr){
+  const seen=new Set();
+  return arr.filter(r=>{ const k=r.title.toLowerCase().replace(/\s+/g,' ').trim(); if(seen.has(k))return false; seen.add(k);return true; });
+}
+
+// ── API Fetchers ──────────────────────────────────────────────────────────────
+async function fetchSemantic(q,limit){
+  try{
+    const r=await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(q)}&fields=title,year,abstract,openAccessPdf,authors,citationCount,externalIds&limit=${limit}`);
+    if(!r.ok) return [];
+    const d=await r.json();
+    return (d.data||[]).map(p=>({
+      source:'Semantic Scholar',title:p.title||'(tanpa judul)',year:p.year||'—',
+      authors:(p.authors||[]).slice(0,3).map(a=>a.name).join(', '),
+      abstract:p.abstract||'',pdfUrl:p.openAccessPdf?.url||null,
+      pageUrl:p.externalIds?.DOI?`https://doi.org/${p.externalIds.DOI}`:`https://www.semanticscholar.org/paper/${p.paperId}`,
+      citations:p.citationCount??null
+    }));
+  }catch{return [];}
+}
+
+async function fetchCORE(q,limit,mode){
+  try{
+    const query=mode==='indonesia'?`${q} language:Indonesian`:q;
+    const r=await fetch(`https://api.core.ac.uk/v3/search/works?q=${encodeURIComponent(query)}&limit=${limit}`);
+    if(!r.ok) return [];
+    const d=await r.json();
+    return (d.results||[]).map(p=>({
+      source:'CORE',title:p.title||'(tanpa judul)',year:p.yearPublished||'—',
+      authors:(p.authors||[]).slice(0,3).map(a=>a.name).join(', '),
+      abstract:p.abstract||'',
+      pdfUrl:p.downloadUrl||(p.links||[]).find(l=>l.type==='download')?.url||null,
+      pageUrl:p.sourceFulltextUrls?.[0]||`https://core.ac.uk/works/${p.id}`,
+      citations:null
+    }));
+  }catch{return [];}
+}
+
+async function fetchArxiv(q,limit){
+  try{
+    const r=await fetch(`https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(q)}&start=0&max_results=${limit}`);
+    if(!r.ok) return [];
+    const xml=new DOMParser().parseFromString(await r.text(),'text/xml');
+    return [...xml.querySelectorAll('entry')].map(e=>{
+      const id=(e.querySelector('id')?.textContent||'').replace(/https?:\/\/arxiv\.org\/abs\//,'');
+      const pub=e.querySelector('published')?.textContent||'';
+      return {
+        source:'arXiv',
+        title:(e.querySelector('title')?.textContent||'').replace(/\s+/g,' ').trim()||'(tanpa judul)',
+        year:pub?new Date(pub).getFullYear():'—',
+        authors:[...e.querySelectorAll('author name')].slice(0,3).map(a=>a.textContent.trim()).join(', '),
+        abstract:(e.querySelector('summary')?.textContent||'').replace(/\s+/g,' ').trim(),
+        pdfUrl:`https://arxiv.org/pdf/${id}`,pageUrl:`https://arxiv.org/abs/${id}`,citations:null
+      };
+    });
+  }catch{return [];}
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderPage(){
+  const pdfOnly=document.getElementById('pdfOnly').value==='1';
+  const items=pdfOnly?allResults.filter(r=>r.pdfUrl):allResults;
+  const perPage=10,total=items.length,totalPg=Math.max(1,Math.ceil(total/perPage));
+  if(currentPage>totalPg) currentPage=totalPg;
+  const slice=items.slice((currentPage-1)*perPage,currentPage*perPage);
+  const hidden=pdfOnly?allResults.length-total:0;
+  setStatus(`Ketemu <strong>${total}</strong> jurnal buat kamu, ARA! 🎉${hidden?` <span style="color:var(--muted)">(${hidden} tanpa PDF disembunyikan)</span>`:''}`);
+  const el=document.getElementById('results');
+  if(!slice.length){
+    el.innerHTML=`<div class="empty"><div class="icon">🥺</div><p>Yah, belum ketemu nih buat "<strong>${esc(activeQuery)}</strong>".<br>Coba ubah kalimatnya atau matikan filter PDF ya~</p></div>`;
+    document.getElementById('pagination').style.display='none'; return;
+  }
+  el.innerHTML=slice.map(cardHtml).join('');
+  const pag=document.getElementById('pagination');
+  pag.style.display=totalPg>1?'flex':'none';
+  document.getElementById('pageInfo').textContent=`Halaman ${currentPage} / ${totalPg}`;
+  document.getElementById('prevBtn').disabled=currentPage<=1;
+  document.getElementById('nextBtn').disabled=currentPage>=totalPg;
+}
+
+const srcClr={'Semantic Scholar':'#8b7cf0','CORE':'#ff9f43','arXiv':'#ff8fb3'};
+function cardHtml(r){
+  const c=srcClr[r.source]||'#9a93b8';
+  const pdf=r.pdfUrl?`<a class="btn-pdf" href="${esc(r.pdfUrl)}" target="_blank" rel="noopener">📄 Unduh PDF</a>`:`<span class="no-pdf">🚫 PDF nggak tersedia</span>`;
+  const cite=r.citations!==null?`<span class="cite">📚 ${r.citations} sitasi</span>`:'';
+  return `<div class="card">
+  <div class="card-header">
+    <div class="card-title"><a href="${esc(r.pageUrl)}" target="_blank" rel="noopener">${esc(r.title)}</a></div>
+    <span class="badge-year">${esc(String(r.year))}</span>
+  </div>
+  <div class="card-meta">
+    <span style="background:${c};color:#fff;padding:2px 9px;border-radius:999px;font-size:0.7rem;font-weight:700;margin-right:6px">${esc(r.source)}</span>
+    ${r.authors?esc(r.authors)+(r.authors.includes(',')?'&nbsp;<em>et al.</em>':''):'<em>Penulis tidak diketahui</em>'}
+  </div>
+  ${r.abstract?`<div class="card-abstract">${esc(r.abstract)}</div>`:''}
+  <div class="card-footer">${pdf}<a class="btn-sec" href="${esc(r.pageUrl)}" target="_blank" rel="noopener">🔗 Detail</a>${cite}</div>
+</div>`;
+}
+
+function goPage(d){ currentPage+=d; renderPage(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s)    { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s){ return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>
