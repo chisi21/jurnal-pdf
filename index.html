@@ -273,8 +273,11 @@
     <div class="prompt-toolbar">
       <div class="toolbar-left">
         <span class="lbl">Sumber:</span>
-        <span class="tag active" data-source="semantic" onclick="toggleSrc(this)">Semantic Scholar</span>
+        <span class="tag active" data-source="openalex" onclick="toggleSrc(this)">OpenAlex</span>
+        <span class="tag active" data-source="crossref" onclick="toggleSrc(this)">Crossref</span>
         <span class="tag active" data-source="core"     onclick="toggleSrc(this)">CORE</span>
+        <span class="tag active" data-source="doaj"     onclick="toggleSrc(this)">DOAJ</span>
+        <span class="tag active" data-source="semantic" onclick="toggleSrc(this)">Semantic</span>
         <span class="tag active" data-source="arxiv"    onclick="toggleSrc(this)">arXiv</span>
         <div class="toolbar-sep"></div>
         <select class="toolbar-select" id="limitSel">
@@ -343,7 +346,7 @@
 // ── State ────────────────────────────────────────────────────────────────────
 let allResults=[], currentPage=1, activeQuery='';
 let categoryMode='mixed';
-let activeSources=new Set(['semantic','core','arxiv']);
+let activeSources=new Set(['openalex','crossref','core','doaj','semantic','arxiv']);
 let aiReady=false;
 let searching=false;
 
@@ -670,7 +673,7 @@ function renderPage(){
   document.getElementById('nextBtn').disabled=currentPage>=totalPg;
 }
 
-const srcClr={'Semantic Scholar':'#8b7cf0','CORE':'#ff9f43','arXiv':'#ff8fb3'};
+const srcClr={'OpenAlex':'#6c5ce7','Crossref':'#00b894','CORE':'#ff9f43','DOAJ':'#e17055','Semantic Scholar':'#8b7cf0','arXiv':'#ff8fb3'};
 function cardHtml(r){
   const c=srcClr[r.source]||'#9a93b8';
   const pdf=r.pdfUrl?`<a class="btn-pdf" href="${esc(r.pdfUrl)}" target="_blank" rel="noopener">📄 Unduh PDF</a>`:`<span class="no-pdf">🚫 PDF nggak tersedia</span>`;
