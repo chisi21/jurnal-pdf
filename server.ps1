@@ -144,10 +144,75 @@ function Search-Arxiv([string]$q, [int]$limit) {
   } catch { return @() }
 }
 
+function Search-OpenAlex([string]$q, [int]$limit) {
+  try {
+    $sel = "id,doi,display_name,publication_year,authorships,open_access,primary_location,best_oa_location,cited_by_count"
+    $url = "https://api.openalex.org/works?search=$([uri]::EscapeDataString($q))&per_page=$limit&select=$sel&mailto=jurnalfinder@example.com"
+    $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 20
+    $d = $r.Content | ConvertFrom-Json
+    $out = @()
+    foreach ($p in $d.results) {
+      $pdf = $null
+      if ($p.best_oa_location -and $p.best_oa_location.pdf_url) { $pdf = $p.best_oa_location.pdf_url }
+      elseif ($p.primary_location -and $p.primary_location.pdf_url) { $pdf = $p.primary_location.pdf_url }
+      elseif ($p.open_access -and $p.open_access.oa_url) { $pdf = $p.open_access.oa_url }
+      $page = $p.doi
+      if (-not $page -and $p.primary_location) { $page = $p.primary_location.landing_page_url }
+      if (-not $page) { $page = $p.id }
+      $auth = (@($p.authorships) | Select-Object -First 3 | ForEach-Object { $_.author.display_name }) -join ', '
+      $out += @{ source='OpenAlex'; title=$p.display_name; year=$p.publication_year; authors=$auth; abstract=''; pdfUrl=$pdf; pageUrl=$page; citations=$p.cited_by_count }
+    }
+    return $out
+  } catch { return @() }
+}
+
+function Search-Crossref([string]$q, [int]$limit) {
+  try {
+    $url = "https://api.crossref.org/works?query=$([uri]::EscapeDataString($q))&rows=$limit&mailto=jurnalfinder@example.com"
+    $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 20
+    $d = $r.Content | ConvertFrom-Json
+    $out = @()
+    foreach ($p in $d.message.items) {
+      $pdf = $null
+      if ($p.link) { $lp = $p.link | Where-Object { $_.'content-type' -eq 'application/pdf' } | Select-Object -First 1; if ($lp) { $pdf = $lp.URL } }
+      $yr = '—'; if ($p.issued -and $p.issued.'date-parts') { try { $yr = $p.issued.'date-parts'[0][0] } catch {} }
+      if ($p.title) { $title = $p.title[0] } else { $title = '(tanpa judul)' }
+      $auth = (@($p.author) | Select-Object -First 3 | ForEach-Object { (($_.given, $_.family) -join ' ').Trim() }) -join ', '
+      $abs = ''; if ($p.abstract) { $abs = ($p.abstract -replace '<[^>]+>','').Trim() }
+      $page = $null; if ($p.DOI) { $page = "https://doi.org/$($p.DOI)" }
+      $out += @{ source='Crossref'; title=$title; year=$yr; authors=$auth; abstract=$abs; pdfUrl=$pdf; pageUrl=$page; citations=$p.'is-referenced-by-count' }
+    }
+    return $out
+  } catch { return @() }
+}
+
+function Search-DOAJ([string]$q, [int]$limit) {
+  try {
+    $url = "https://doaj.org/api/search/articles/$([uri]::EscapeDataString($q))?pageSize=$limit"
+    $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 20
+    $d = $r.Content | ConvertFrom-Json
+    $out = @()
+    foreach ($item in $d.results) {
+      $b = $item.bibjson
+      if (-not $b) { continue }
+      $pdf = $null; $page = $null
+      foreach ($l in @($b.link)) {
+        if ($l.type -eq 'fulltext') {
+          if (($l.content_type -and $l.content_type -match 'pdf') -or ($l.url -match '\.pdf')) { $pdf = $l.url }
+          if (-not $page) { $page = $l.url }
+        }
+      }
+      $auth = (@($b.author) | Select-Object -First 3 | ForEach-Object { $_.name }) -join ', '
+      $out += @{ source='DOAJ'; title=$b.title; year=$b.year; authors=$auth; abstract=$b.abstract; pdfUrl=$pdf; pageUrl=$page; citations=$null }
+    }
+    return $out
+  } catch { return @() }
+}
+
 function Invoke-JournalSearch($payload) {
   $topics   = @($payload.topics) | Select-Object -First 2
   $category = if ($payload.category) { [string]$payload.category } else { 'mixed' }
-  $sources  = @($payload.sources); if (-not $sources) { $sources = @('semantic','core','arxiv') }
+  $sources  = @($payload.sources); if (-not $sources -or $sources.Count -eq 0) { $sources = @('semantic','core','arxiv','openalex','crossref','doaj') }
   $limit    = 20; if ($payload.limit) { $limit = [int]$payload.limit }
   if ($limit -lt 5) { $limit = 5 }; if ($limit -gt 30) { $limit = 30 }
   $perTopic = [Math]::Max(6, [Math]::Floor($limit / [Math]::Max(1, $topics.Count)))
@@ -157,17 +222,27 @@ function Invoke-JournalSearch($payload) {
     $q = [string]$t.query
     $qId = if ($t.queryId) { [string]$t.queryId } else { $q }
     if (-not $q -and -not $qId) { continue }
+
     if ($category -eq 'indonesia') {
-      if ($sources -contains 'semantic') { $all += Search-Semantic $qId $perTopic; Start-Sleep -Milliseconds 300 }
+      if ($sources -contains 'openalex') { $all += Search-OpenAlex $qId $perTopic }
+      if ($sources -contains 'crossref') { $all += Search-Crossref $qId $perTopic }
       if ($sources -contains 'core')     { $all += Search-CORE $qId $perTopic 'international' }
+      if ($sources -contains 'doaj')     { $all += Search-DOAJ $qId $perTopic }
+      if ($sources -contains 'semantic') { $all += Search-Semantic $qId $perTopic; Start-Sleep -Milliseconds 300 }
     } elseif ($category -eq 'international') {
-      if ($sources -contains 'semantic') { $all += Search-Semantic $q $perTopic; Start-Sleep -Milliseconds 300 }
+      if ($sources -contains 'openalex') { $all += Search-OpenAlex $q $perTopic }
+      if ($sources -contains 'crossref') { $all += Search-Crossref $q $perTopic }
       if ($sources -contains 'core')     { $all += Search-CORE $q $perTopic 'international' }
       if ($sources -contains 'arxiv')    { $all += Search-Arxiv $q $perTopic }
-    } else {
+      if ($sources -contains 'doaj')     { $all += Search-DOAJ $q $perTopic }
       if ($sources -contains 'semantic') { $all += Search-Semantic $q $perTopic; Start-Sleep -Milliseconds 300 }
-      if ($sources -contains 'core')     { $all += Search-CORE $q $perTopic 'international'; if ($qId -ne $q) { $all += Search-CORE $qId $perTopic 'international' } }
+    } else {
+      if ($sources -contains 'openalex') { $all += Search-OpenAlex $q $perTopic; if ($qId -ne $q) { $all += Search-OpenAlex $qId $perTopic } }
+      if ($sources -contains 'crossref') { $all += Search-Crossref $q $perTopic; if ($qId -ne $q) { $all += Search-Crossref $qId $perTopic } }
+      if ($sources -contains 'core')     { $all += Search-CORE $q $perTopic 'international' }
       if ($sources -contains 'arxiv')    { $all += Search-Arxiv $q $perTopic }
+      if ($sources -contains 'doaj')     { if ($qId -ne $q) { $all += Search-DOAJ $qId $perTopic } else { $all += Search-DOAJ $q $perTopic } }
+      if ($sources -contains 'semantic') { $all += Search-Semantic $q $perTopic; Start-Sleep -Milliseconds 300 }
     }
   }
 
@@ -268,6 +343,7 @@ try {
       if (Test-Path $filePath -PathType Leaf) {
         $ext  = [System.IO.Path]::GetExtension($filePath).ToLower()
         if ($mimeMap.ContainsKey($ext)) { $mime = $mimeMap[$ext] } else { $mime = 'application/octet-stream' }
+        try { $res.Headers.Add('Cache-Control', 'no-store, must-revalidate') } catch {}
         $fbytes = [System.IO.File]::ReadAllBytes($filePath)
         Write-Res $res 200 $mime $fbytes
       } else {
