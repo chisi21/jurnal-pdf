@@ -76,6 +76,92 @@ async function fetchArxiv(q, limit) {
   } catch (e) { return []; }
 }
 
+async function fetchOpenAlex(q, limit) {
+  try {
+    const url = `https://api.openalex.org/works?search=${encodeURIComponent(q)}&per_page=${limit}&mailto=jurnalfinder@example.com`;
+    const r = await fetch(url);
+    if (!r.ok) return [];
+    const d = await r.json();
+    return (d.results || []).map((p) => {
+      let abstract = '';
+      const inv = p.abstract_inverted_index;
+      if (inv) {
+        const words = [];
+        for (const w in inv) { for (const pos of inv[w]) words[pos] = w; }
+        abstract = words.join(' ');
+      }
+      const pdf = (p.best_oa_location && p.best_oa_location.pdf_url)
+        || (p.primary_location && p.primary_location.pdf_url)
+        || (p.open_access && p.open_access.oa_url) || null;
+      const page = p.doi || (p.primary_location && p.primary_location.landing_page_url) || p.id;
+      return {
+        source: 'OpenAlex',
+        title: p.display_name || '(tanpa judul)',
+        year: p.publication_year || '—',
+        authors: (p.authorships || []).slice(0, 3).map((a) => a.author && a.author.display_name).filter(Boolean).join(', '),
+        abstract,
+        pdfUrl: pdf,
+        pageUrl: page,
+        citations: p.cited_by_count != null ? p.cited_by_count : null,
+      };
+    });
+  } catch (e) { return []; }
+}
+
+async function fetchCrossref(q, limit) {
+  try {
+    const url = `https://api.crossref.org/works?query=${encodeURIComponent(q)}&rows=${limit}&mailto=jurnalfinder@example.com`;
+    const r = await fetch(url);
+    if (!r.ok) return [];
+    const d = await r.json();
+    return ((d.message && d.message.items) || []).map((p) => {
+      let pdf = null;
+      if (p.link) { const l = p.link.find((x) => x['content-type'] === 'application/pdf'); if (l) pdf = l.URL; }
+      let year = '—';
+      if (p.issued && p.issued['date-parts'] && p.issued['date-parts'][0]) year = p.issued['date-parts'][0][0];
+      return {
+        source: 'Crossref',
+        title: (p.title && p.title[0]) || '(tanpa judul)',
+        year: year || '—',
+        authors: (p.author || []).slice(0, 3).map((a) => [a.given, a.family].filter(Boolean).join(' ')).join(', '),
+        abstract: (p.abstract || '').replace(/<[^>]+>/g, '').trim(),
+        pdfUrl: pdf,
+        pageUrl: p.DOI ? `https://doi.org/${p.DOI}` : null,
+        citations: p['is-referenced-by-count'] != null ? p['is-referenced-by-count'] : null,
+      };
+    });
+  } catch (e) { return []; }
+}
+
+async function fetchDOAJ(q, limit) {
+  try {
+    const url = `https://doaj.org/api/search/articles/${encodeURIComponent(q)}?pageSize=${limit}`;
+    const r = await fetch(url);
+    if (!r.ok) return [];
+    const d = await r.json();
+    return (d.results || []).map((item) => {
+      const b = item.bibjson || {};
+      let pdf = null, page = null;
+      (b.link || []).forEach((l) => {
+        if (l.type === 'fulltext') {
+          if ((l.content_type && /pdf/i.test(l.content_type)) || /\.pdf/i.test(l.url || '')) pdf = l.url;
+          if (!page) page = l.url;
+        }
+      });
+      return {
+        source: 'DOAJ',
+        title: b.title || '(tanpa judul)',
+        year: b.year || '—',
+        authors: (b.author || []).slice(0, 3).map((a) => a.name).join(', '),
+        abstract: b.abstract || '',
+        pdfUrl: pdf,
+        pageUrl: page,
+        citations: null,
+      };
+    });
+  } catch (e) { return []; }
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
@@ -91,25 +177,34 @@ module.exports = async (req, res) => {
 
   const semQueries = [];
   const parallelTasks = [];
+
+  // peta sumber -> fungsi (semantic ditangani terpisah karena rate-limit)
+  const SRC = {
+    openalex: fetchOpenAlex,
+    crossref: fetchCrossref,
+    core: (q, n) => fetchCORE(q, n, 'international'),
+    arxiv: fetchArxiv,
+    doaj: fetchDOAJ,
+  };
+  function add(name, query, n) {
+    if (!sources.has(name)) return;
+    if (name === 'semantic') { semQueries.push([query, n]); return; }
+    if (SRC[name]) parallelTasks.push(SRC[name](query, n));
+  }
+
   topics.forEach((t) => {
     const q = t.query;            // query Bahasa Inggris
     const qId = t.queryId || q;   // query Bahasa Indonesia
     if (!q && !qId) return;
+
     if (category === 'indonesia') {
-      if (sources.has('semantic')) semQueries.push([qId, perTopic]);
-      if (sources.has('core')) parallelTasks.push(fetchCORE(qId, perTopic, 'international'));
+      ['openalex', 'crossref', 'core', 'doaj', 'semantic'].forEach((s) => add(s, qId, perTopic));
     } else if (category === 'international') {
-      if (sources.has('semantic')) semQueries.push([q, perTopic]);
-      if (sources.has('core')) parallelTasks.push(fetchCORE(q, perTopic, 'international'));
-      if (sources.has('arxiv')) parallelTasks.push(fetchArxiv(q, perTopic));
+      ['openalex', 'crossref', 'core', 'arxiv', 'doaj', 'semantic'].forEach((s) => add(s, q, perTopic));
     } else {
-      // campuran: Inggris + Indonesia
-      if (sources.has('semantic')) semQueries.push([q, perTopic]);
-      if (sources.has('core')) {
-        parallelTasks.push(fetchCORE(q, perTopic, 'international'));
-        if (qId !== q) parallelTasks.push(fetchCORE(qId, perTopic, 'international'));
-      }
-      if (sources.has('arxiv')) parallelTasks.push(fetchArxiv(q, perTopic));
+      // campuran: Inggris + Indonesia untuk sumber besar
+      ['openalex', 'crossref', 'core', 'arxiv', 'semantic'].forEach((s) => add(s, q, perTopic));
+      if (qId !== q) ['openalex', 'crossref', 'core', 'doaj'].forEach((s) => add(s, qId, perTopic));
     }
   });
 
