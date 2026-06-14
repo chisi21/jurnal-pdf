@@ -1,3 +1,6 @@
+# JANGAN commit API key! (di Vercel pakai Environment Variable)
+config.json
+
 # OS / editor
 Thumbs.db
 .DS_Store
